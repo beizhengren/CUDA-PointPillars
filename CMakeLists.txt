@@ -13,37 +13,51 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-cmake_minimum_required(VERSION 2.8.7)
+cmake_minimum_required(VERSION 3.17)
 project(pointpillar)
 set(CMAKE_BUILD_PYTHON $ENV{USE_Python})
 set(CMAKE_BUILD_TYPE "Release")
+
+set(CMAKE_CXX_FLAGS_RELEASE "-std=c++17 -Wextra -Wall -Wno-missing-field-initializers -Wno-deprecated-declarations -O3")
+set(CMAKE_CXX_FLAGS_DEBUG   "-std=c++17 -O0 -g")
 # set(CMAKE_BUILD_TYPE "Debug")
-set(arch ${CMAKE_HOST_SYSTEM_PROCESSOR})
+
+set(arch ${CMAKE_HOST_SYSTEM_PROCESSOR}) # x86_64
+if(${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL  "aarch64")
+  set(CMAKE_C_COMPILER /usr/bin/aarch64-linux-gnu-gcc)
+  set(CMAKE_CXX_COMPILER /usr/bin/aarch64-linux-gnu-g++)
+  set(CUDA_INSTALL_TARGET_DIR targets/aarch64-linux)
+elseif(${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "x86_64")
+  set(CMAKE_C_COMPILER /usr/bin/gcc)
+  set(CMAKE_CXX_COMPILER /usr/bin/g++)
+  set(CUDA_INSTALL_TARGET_DIR targets/x86_64-linux)
+endif()
 
 find_package(CUDA REQUIRED)
-
-set(CMAKE_CXX_FLAGS_RELEASE "-std=c++14 -Wextra -Wall -Wno-missing-field-initializers -Wno-deprecated-declarations -O3")
-set(CMAKE_CXX_FLAGS_DEBUG   "-std=c++14 -O0 -g")
-
-set(CUDA_NVCC_FLAGS_RELEASE "-Werror=all-warnings -Xcompiler -std=c++14,-Wextra,-Wall,-Wno-deprecated-declarations,-O3")
-set(CUDA_NVCC_FLAGS_DEBUG   "-std=c++14 -O0 -g")
+set(CUDA_TOOLKIT_ROOT_DIR /usr/local/cuda)
+set(CUDA_INCLUDE_DIRS ${CUDA_TOOLKIT_ROOT_DIR}/${CUDA_INSTALL_TARGET_DIR}/include)
+set(CUDA_NVCC_FLAGS_RELEASE "-Werror=all-warnings -Xcompiler -std=c++17,-Wextra,-Wall,-Wno-deprecated-declarations,-O3")
+set(CUDA_NVCC_FLAGS_DEBUG   "-std=c++17 -O0 -g")
 
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} 
-    -gencode arch=compute_$ENV{CUDASM},code=compute_$ENV{CUDASM}
+    -gencode arch=compute_86,code=compute_86
 )
 
+# set(TENSORRT_ROOT /home/wyz/workspace/softwares/Nvidia/TensorRT-8.4.3.1)
+set(TENSORRT_ROOT /home/wyz/workspace/softwares/Nvidia/TensorRT-8.6.1.6.Linux.x86_64-gnu.cuda-11.8/TensorRT-8.6.1.6/)
+set(TENSORRT_INCLUDE_DIRS ${TENSORRT_ROOT}/include/)
+set(TENSORRT_LIBRARY_DIRS ${TENSORRT_ROOT}/lib/)
+
 include_directories(
-    $ENV{CUDA_Inc}
-    $ENV{TensorRT_Inc}
-    src
+  ${CUDA_INCLUDE_DIRS}
+  ${TENSORRT_INCLUDE_DIRS}
+  src
 	src/pointpillar
 )
 
 link_directories(
-    $ENV{CUDA_Lib}
-    $ENV{TensorRT_Lib}
-    build
-)
+    ${TENSORRT_LIBRARY_DIRS}
+    build)
 
 file(GLOB_RECURSE CORE_FILES 
     src/pointpillar/*.cu 
